@@ -1,0 +1,8 @@
+bin:			The executable files
+calculate_stress.py:	The python script for initial shear stresses, mus, and Dc
+DATA:			The files for running specfem3d
+MESH-Myanmar-uniform:	MESH file
+Myanmar_slip.dat:	The slip inversion model
+okada_wrapper-master:	The okada python package
+Submit_jobs.sh:		The SHELL script to run specfem3d
+Template: 		Containing the template files for running specfem3d, which will be changed and saved into ./DATA folder.
