@@ -14,6 +14,9 @@ for i in range(len(sys.argv)):
         S          = float(sys.argv[i+4])
         dc         = float(sys.argv[i+5])
         mu         = float(sys.argv[i+6])
+        Lon_ref    = float(sys.argv[i+7])
+        Lat_ref    = float(sys.argv[i+8]) 
+        Gc_type    = float(sys.argv[i+9])
 
 
 def ll2xy(Lon, Lat, Lon_ref, Lat_ref):
@@ -109,9 +112,9 @@ def cal_tau(X,Y,dep,slip,rake,dip,mu,dx,dz):
     for i in range(num_p): 
         # The slip patch
         for j in range(num_p):
-            success,u,grad_u = dc3dwrapper(alpha, [(X[i]-X[j])*1e3,(Y[i]-Y[j])*1e3,dep[i]*1e3],
-                                           -dep[j]*1e3, dip,
-                                       [-dx*1e3/2.0,dx*1e3/2.0],[-dz*1e3/2.0,dz*1e3/2.0],[slip_str[j],slip_dip[j],0.0])
+            success,u,grad_u = dc3dwrapper(alpha, [(X[i]-X[j]),(Y[i]-Y[j]),dep[i]],
+                                           -dep[j], dip,
+                                       [-dx/2.0,dx/2.0],[-dz/2.0,dz/2.0],[slip_str[j],slip_dip[j],0.0])
             assert(success == 0)
             uij[i,:,:] = uij[i,:,:] + grad_u[:,:]
 
@@ -136,12 +139,6 @@ def cal_tau(X,Y,dep,slip,rake,dip,mu,dx,dz):
 #####################################################
 
 
-km2m   = 1e3
-GPa2Pa = 1e9  # GPa to Pa
-mu     = mu * GPa2Pa  # shear modulus
-
-Lon_ref=96.0442
-Lat_ref=21.9924
 
 #Read the kinematic slip model
 #x y depth yinc xinc strike dip rake slip Sample
@@ -154,12 +151,13 @@ rake   = np.abs(dis['rake'])
 xinc   = np.mean(dis['xinc'])
 yinc   = np.mean(dis['yinc'])
 
-# Truncate the slip for those smaller than a value
-truncate_slip = 0.0
-#slip = np.where(slip < truncate_slip, 0, slip)
+# Transform the unit to SI
+X = X * 1e3
+Y = Y * 1e3
+Dep  = Dep * 1e3
+xinc = xinc * 1e3
+yinc = yinc * 1e3
 
-# The rotation angle is 270-strike
-#[X_rot,Y_rot,Dep] = rotate_2d_about_point(X, Y, Dep, [0,0], strike-270)
 dx_str   = ( xinc**2+yinc**2)**0.5
 dz_dip   =  (np.unique(Dep)[1] - np.unique(Dep)[0]) / np.sin(np.radians(dip))
 
@@ -170,76 +168,45 @@ tau_dip = tau_dip + np.sin(np.deg2rad(rake))*mud*S3
 tau     = (tau_str**2+tau_dip**2)**0.5
 
 # Use griddata to interpolate the data
-grid_y, grid_z = np.mgrid[np.min(Y):np.max(Y):100j, np.min(Dep):np.max(Dep):100j]
-grid_slip      = griddata(np.column_stack((Y, Dep)), slip,    (grid_y, grid_z), method='linear',fill_value=0)
-grid_tau_str   = griddata(np.column_stack((Y, Dep)), tau_str, (grid_y, grid_z), method='linear',fill_value=0)
-grid_tau_dip   = griddata(np.column_stack((Y, Dep)), tau_dip, (grid_y, grid_z), method='linear',fill_value=0)
-grid_tau       = griddata(np.column_stack((Y, Dep)), tau, (grid_y, grid_z), method='linear',fill_value=99999e6)
+grid_y, grid_z = np.mgrid[np.min(Y):np.max(Y):200j, np.min(Dep):np.max(Dep):10j]
+grid_slip      = griddata(np.column_stack((Y, Dep)),    slip, (grid_y, grid_z), method='nearest',fill_value=0)
+grid_tau_str   = griddata(np.column_stack((Y, Dep)), tau_str, (grid_y, grid_z), method='nearest',fill_value=0)
+grid_tau_dip   = griddata(np.column_stack((Y, Dep)), tau_dip, (grid_y, grid_z), method='nearest',fill_value=0)
+grid_tau       = griddata(np.column_stack((Y, Dep)),     tau, (grid_y, grid_z), method='nearest',fill_value=99999e6)
 grid_x         = griddata(np.column_stack((Y, Dep)),       X, (grid_y, grid_z), method='nearest')
 
-grid_mus  = ((1+S)*(grid_tau-mud*S3)/(S3) + mud)
 upbound   = np.where(grid_y <= np.min(Y))
 lowbound  = np.where(grid_y >= np.max(Y))
-mask = (grid_y >= 80) | (grid_y <= -410)
+mask = (grid_y >= np.max(Y)) | (grid_y <= np.min(Y))
 grid_tau_str[mask] = 0
 grid_tau_dip[mask] = 0
 grid_tau[mask] = 99999e6
 
 
-### Plot
-#plt.figure(figsize=(10, 8))
-#
-#plt.subplot(3,2,1)
-#plt.imshow(grid_slip.T, extent=(np.min(grid_x), np.max(grid_x), np.min(grid_z), np.max(grid_z)), origin='lower', cmap='hot_r')
-#plt.title('Slip')
-#plt.xlabel('X Coordinate')
-#plt.ylabel('Y Coordinate')
-#cbar = plt.colorbar(shrink=0.2)
-#cbar.set_label('Slip (m)')
-#
-#plt.subplot(3,2,2)
-#plt.imshow(grid_tau_str.T / 1e6, extent=(np.min(grid_x), np.max(grid_x), np.min(grid_z), np.max(grid_z)), origin='lower', cmap='hot_r')
-#plt.title('Along-strike stress drop')
-#plt.xlabel('X Coordinate')
-#plt.ylabel('Y Coordinate')
-#cbar = plt.colorbar(shrink=0.2)
-#cbar.set_label('Stress drop (MPa)')
-#
-#plt.subplot(3,2,3)
-#plt.imshow(grid_tau_dip.T / 1e6, extent=(np.min(grid_x), np.max(grid_x), np.min(grid_z), np.max(grid_z)), origin='lower', cmap='hot_r')
-#plt.title('Along-dip stress drop')
-#plt.xlabel('X Coordinate')
-#plt.ylabel('Y Coordinate')
-#cbar = plt.colorbar(shrink=0.2)
-#cbar.set_label('Stress drop (MPa)')
-#
-#plt.subplot(3,2,4)
-#plt.imshow(grid_tau.T / 1e6, extent=(np.min(grid_x), np.max(grid_x), np.min(grid_z), np.max(grid_z)), origin='lower', cmap='hot_r')
-#plt.title('Total stress drop')
-#plt.xlabel('X Coordinate')
-#plt.ylabel('Y Coordinate')
-#cbar = plt.colorbar(shrink=0.2)
-#cbar.set_label('Stress drop (MPa)')
-#
-#plt.subplot(3,2,5)
-#plt.scatter(X,Y)
-#
-#plt.tight_layout()
-#plt.savefig('stress_and_slip.png')
-#
+grid_dc = np.zeros((grid_slip.shape))
+if(Gc_type == 0):
+    grid_mus     = (1+S)*(grid_tau-mud*S3)/(S3) + mud
+    grid_dc[:,:] = dc
+else:   # for variable Gc, the input dc indicate the energy ratio
+    Ratio = dc
+    taus_taud  = grid_tau-mud*S3
+    Gc         = Ratio * (0.5*grid_slip*(grid_tau-mud*S3))
+    Gc         = np.where(Gc<=0, 99999e6, Gc )
+    taus_taud  = np.where(taus_taud<=0, 1, taus_taud)
+    grid_mus   = (1+S)*taus_taud/(S3) + mud
+    grid_dc    = 2*Gc/taus_taud 
+
 ############
-
-
 output= open("./DATA/initial_tau_str.dat","w")
 output.writelines(str(grid_x.shape[0]*grid_x.shape[1]))
 output.writelines("\n")
 for i in range(grid_x.shape[0]):
     for j in range(grid_x.shape[1]):
-        output.writelines(str(grid_x[i,j]*1e3))
+        output.writelines(str(grid_x[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_y[i,j]*1e3))
+        output.writelines(str(grid_y[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_z[i,j]*1e3))
+        output.writelines(str(grid_z[i,j]))
         output.writelines("  ")
         output.writelines(str(grid_tau_str[i,j]))    
         output.writelines("\n")
@@ -250,11 +217,11 @@ output.writelines(str(grid_x.shape[0]*grid_x.shape[1]))
 output.writelines("\n")
 for i in range(grid_x.shape[0]):
     for j in range(grid_x.shape[1]):
-        output.writelines(str(grid_x[i,j]*1e3))
+        output.writelines(str(grid_x[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_y[i,j]*1e3))
+        output.writelines(str(grid_y[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_z[i,j]*1e3))
+        output.writelines(str(grid_z[i,j]))
         output.writelines("  ")
         output.writelines(str(grid_tau_dip[i,j]))
         output.writelines("\n")
@@ -265,11 +232,11 @@ output.writelines(str(grid_x.shape[0]*grid_x.shape[1]))
 output.writelines("\n")
 for i in range(grid_x.shape[0]):
     for j in range(grid_x.shape[1]):
-        output.writelines(str(grid_x[i,j]*1e3))
+        output.writelines(str(grid_x[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_y[i,j]*1e3))
+        output.writelines(str(grid_y[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_z[i,j]*1e3))
+        output.writelines(str(grid_z[i,j]))
         output.writelines("  ")
         output.writelines(str(grid_mus[i,j]))
         output.writelines("\n")
@@ -281,12 +248,12 @@ output.writelines(str(grid_x.shape[0]*grid_x.shape[1]))
 output.writelines("\n")
 for i in range(grid_x.shape[0]):
     for j in range(grid_x.shape[1]):
-        output.writelines(str(grid_x[i,j]*1e3))
+        output.writelines(str(grid_x[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_y[i,j]*1e3))
+        output.writelines(str(grid_y[i,j]))
         output.writelines("  ")
-        output.writelines(str(grid_z[i,j]*1e3))
+        output.writelines(str(grid_z[i,j]))
         output.writelines("  ")
-        output.writelines(str(dc)) 
+        output.writelines(str(grid_dc[i,j])) 
         output.writelines("\n")
 output.close()

@@ -14,14 +14,17 @@ ulimit -s unlimited
 
 SLIPMODEL="Myanmar_slip.dat"
 MESHDIR="./MESH-Myanmar-uniform"
-OUTPUTDIR="/home/weng/Works/SPECFEM3D_TUTORIAL/3D_Myanmar_Workstation/output"
-NPROC=60
-NSTEP=1000
+OUTPUTDIR="/public3/home/scb9619/3D_Myanmar/output"
+NPROC=128
+NSTEP=2000
 DT=0.005
 mud=0.4
 S3=100e6
-mu=30
+mu=30e9
 model_name="Myanmar"
+Lon_ref=96.0442
+Lat_ref=21.9924
+Gc_type=1   # 0: uniform Dc and S ratio; 1: variable Gc, dc indicate the energy ratio
 
 for dc in 0.5
 do
@@ -43,13 +46,12 @@ gawk '{if($1=="NPROC")                         print $1,$2,"'"$NPROC"'";\
   else if($1=="NSTEP")                         print $1,$2,"'"$NSTEP"'";\
   else if($1=="DT")                            print $1,$2,"'"$DT"'"; \
   else print $0}' Template/Par_file > DATA/Par_file
-
 # Revise the fault parameters
 #sed  -e 's/key_dc/'$dc'/g'  ./Template/Par_file_faults > DATA/Par_file_faults
 cp  ./Template/Par_file_faults  DATA/Par_file_faults
 
-echo ${SLIPMODEL} ${mud} ${S3} ${S} ${dc} ${mu}
-python calcualte_stress.py -n ${SLIPMODEL} ${mud} ${S3} ${S} ${dc} ${mu}
+echo ${SLIPMODEL} ${mud} ${S3} ${S} ${dc} ${mu} ${Lon_ref} ${Lat_ref} ${Gc_type}
+python calculate_stress.py -n ${SLIPMODEL} ${mud} ${S3} ${S} ${dc} ${mu} ${Lon_ref} ${Lat_ref} ${Gc_type}
 
 ### Run the simulation
 # decomposes mesh
@@ -62,7 +64,7 @@ mpirun -np $NPROC ./bin/xspecfem3D
 # Save the output data
 rm -rf ${OUTPUTDIR}/${model_name}_dc_${dc}_S_${S}
 rm OUTPUT_FILES/DATABASES_MPI -r
-mv OUTPUT_FILES ${OUTPUTDIR}/maduo_dc_${dc}_S_${S}
+mv OUTPUT_FILES ${OUTPUTDIR}/${model_name}_dc_${dc}_S_${S}
 
 done
 done
