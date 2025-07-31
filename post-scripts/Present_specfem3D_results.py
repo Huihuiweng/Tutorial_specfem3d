@@ -253,8 +253,8 @@ cs1 = ax1.contour(grid_x, grid_y, Init_t0, ContourT, colors='k', linewidths=0.1)
 cbar1 = plt.colorbar(im1, ax=ax1, extend='both', shrink=0.8, ticks=[0,10,20,30,40])
 cbar1.set_label('Time (s)')
 ax1.set_title('Rupture time')
-ax1.set_xlabel('Depth (km)') 
-ax1.set_ylabel('Along-strike distance (km)') 
+ax1.set_xlabel('Along-strike distance (km)') 
+ax1.set_ylabel('Depth (km)') 
 
 # Initial stress
 ax2 = plt.subplot2grid((6, 1), (1, 0), colspan=1, rowspan=1)
@@ -262,8 +262,8 @@ im2 = ax2.imshow(stress_x_grid.T, extent=fault_range, origin='lower', cmap='hot_
 cbar2 = plt.colorbar(im2, ax=ax2, extend='both', shrink=0.8, ticks=[40,50,60])
 cbar2.set_label('Stress (MPa)')
 ax2.set_title('Initial Stress')
-ax2.set_xlabel('Depth (km)') 
-ax2.set_ylabel('Along-strike distance (km)') 
+ax2.set_xlabel('Along-strike distance (km)') 
+ax2.set_ylabel('Depth (km)') 
 
 # Rupture speed
 ax3 = plt.subplot2grid((6, 1), (2, 0), colspan=1, rowspan=1)
@@ -272,8 +272,8 @@ cs3 = ax3.contour(grid_x, grid_y, Init_t0, ContourT, colors='k', linewidths=0.1)
 cbar3 = plt.colorbar(im3, ax=ax3, extend='both', shrink=0.8, ticks=[0, 0.5, 1, 1.5])
 cbar3.set_label('Vr/Vs')
 ax3.set_title('Rupture Speed')
-ax3.set_xlabel('Depth (km)') 
-ax3.set_ylabel('Along-strike distance (km)') 
+ax3.set_xlabel('Along-strike distance (km)') 
+ax3.set_ylabel('Depth (km)') 
 
 # Final slip
 ax4 = plt.subplot2grid((6, 1), (3, 0), colspan=1, rowspan=1)
@@ -284,8 +284,8 @@ cs4 = ax4.contour(grid_x, grid_y, Slip_grid, ContourS, colors='k', linewidths=0.
 cbar4 = plt.colorbar(im4, ax=ax4, extend='both', shrink=0.8, ticks=[0, 5, 10])
 cbar4.set_label('Slip (m)')
 ax4.set_title('Final Slip')
-ax4.set_xlabel('Depth (km)') 
-ax4.set_ylabel('Along-strike distance (km)') 
+ax4.set_xlabel('Along-strike distance (km)') 
+ax4.set_ylabel('Depth (km)') 
 
 # Stress drop at strike direction
 ax5 = plt.subplot2grid((6, 1), (4, 0), colspan=1, rowspan=1)
@@ -293,8 +293,8 @@ im5 = ax5.imshow(str_grid.T, extent=fault_range, origin='lower', cmap='RdBu', vm
 cbar5 = plt.colorbar(im5, ax=ax5, extend='both', shrink=0.8, ticks=[-30, -15, 0, 15, 30])
 cbar5.set_label('Stress Drop (MPa)')
 ax5.set_title('Strike Stress Drop')
-ax5.set_xlabel('Depth (km)') 
-ax5.set_ylabel('Along-strike distance (km)') 
+ax5.set_xlabel('Along-strike distance (km)') 
+ax5.set_ylabel('Depth (km)') 
 
 # Stress drop at dip direction
 ax6 = plt.subplot2grid((6, 1), (5, 0), colspan=1, rowspan=1)
@@ -302,8 +302,8 @@ im6 = ax6.imshow(dip_grid.T, extent=fault_range, origin='lower', cmap='viridis',
 cbar6 = plt.colorbar(im6, ax=ax6, extend='both', shrink=0.8, ticks=[-30, -15, 0, 15, 30])
 cbar6.set_label('Stress Drop (MPa)')
 ax6.set_title('Dip Stress Drop')
-ax6.set_xlabel('Depth (km)') 
-ax6.set_ylabel('Along-strike distance (km)') 
+ax6.set_xlabel('Along-strike distance (km)') 
+ax6.set_ylabel('Depth (km)') 
 
 plt.tight_layout() 
 
