@@ -90,12 +90,15 @@ def find_nearest_point(uxp, uyp, uzp, uv_ext, x0, y0):
     return linear_idx, min_uy, min_ux
 
 
-# Assuming strike is along the X direction
-def cal_tau(X,Y,dep,slip,rake,dip,mu,dx,dz):
+def cal_tau(X,Y,dep,strike,slip,strike,rake,dip,mu,dx,dz):
     from okada_wrapper import dc3d0wrapper, dc3dwrapper
     num_p    =  slip.shape[0]
     slip_str =  slip[:]*np.cos(rake/180.0*np.pi)
     slip_dip =  slip[:]*np.sin(rake/180.0*np.pi)
+
+    # For okada solution, we shall rotate the coordinate to make the strike direction is along the X direction
+    X_rotated =   X * np.sin(strike/180.0*np.pi) + Y * cos(strike/180.0*np.pi)
+    Y_rotated = - X * np.cos(strike/180.0*np.pi) + Y * sin(strike/180.0*np.pi)
 
     tau_str = np.zeros((num_p))
     tau_dip = np.zeros((num_p))
@@ -112,9 +115,9 @@ def cal_tau(X,Y,dep,slip,rake,dip,mu,dx,dz):
     for i in range(num_p): 
         # The slip patch
         for j in range(num_p):
-            success,u,grad_u = dc3dwrapper(alpha, [(X[i]-X[j]),(Y[i]-Y[j]),dep[i]],
+            success,u,grad_u = dc3dwrapper(alpha, [(X_rotated[i]-X_rotated[j]),(Y_rotated[i]-Y_rotated[j]),dep[i]],
                                            -dep[j], dip,
-                                       [-dx/2.0,dx/2.0],[-dz/2.0,dz/2.0],[slip_str[j],slip_dip[j],0.0])
+                               [-dx/2.0,dx/2.0],[-dz/2.0,dz/2.0],[slip_str[j],slip_dip[j],0.0])
             assert(success == 0)
             uij[i,:,:] = uij[i,:,:] + grad_u[:,:]
 
@@ -146,6 +149,7 @@ dis= pd.read_csv(slip_file, sep=r'\s+')
 [X,Y]  = ll2xy(dis['x'], dis['y'], Lon_ref, Lat_ref)
 Dep    = - dis['depth'] 
 slip   = dis['slip']
+strike = np.mean(dis['strike'])    # Use the average number
 dip    = np.mean(dis['dip'])    # Use the average number
 rake   = np.abs(dis['rake'])
 xinc   = np.mean(dis['xinc'])
@@ -161,7 +165,7 @@ yinc = yinc * 1e3
 dx_str   = ( xinc**2+yinc**2)**0.5
 dz_dip   =  (np.unique(Dep)[1] - np.unique(Dep)[0]) / np.sin(np.radians(dip))
 
-[tau_str,tau_dip,tau_nor] = cal_tau(X,Y,Dep,slip,rake,dip,mu,dx_str,dz_dip)
+[tau_str,tau_dip,tau_nor] = cal_tau(X,Y,Dep,strike,slip,rake,dip,mu,dx_str,dz_dip)
 
 tau_str = tau_str + np.cos(np.deg2rad(rake))*mud*S3
 tau_dip = tau_dip + np.sin(np.deg2rad(rake))*mud*S3
